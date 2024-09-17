@@ -1,0 +1,62 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Flask environment variables
+instance/
+.env
+*.env
+
+# SQLite database files
+*.sqlite3
+*.db
+
+# Pytest cache
+.pytest_cache/
+
+# Flask logs
+logs/
+*.log
+
+# Virtual environment
+venv/
+ENV/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# macOS files
+.DS_Store
+
+# VSCode settings
+.vscode/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# PyInstaller
+# Usually these files are written by a python script from a template
+# before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Docker
+docker-compose.yml
+Dockerfile
+
+# Test outputs
+test-output/
+
+# Local python environment
+*.pyo
+*.pyd
+*.so
+*.dll
+
+# Python packaging
+build/
+dist/
+*.egg-info/
