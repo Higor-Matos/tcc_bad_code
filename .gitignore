@@ -10,8 +10,6 @@ instance/
 
 # SQLite database files
 *.sqlite3
-*.db
-
 # Pytest cache
 .pytest_cache/
 
