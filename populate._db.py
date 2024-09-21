@@ -37,17 +37,19 @@ def process_string(s):
             result += char.upper()
     return result
 
+# Função de envio de email utilizando o Outlook
 def send_email(to_address, subject, body, attachment=None):
-    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server = smtplib.SMTP('smtp.office365.com', 587)  # Usando o servidor SMTP da Outlook
     server.ehlo()
     server.starttls()
-    server.login('seu_email@gmail.com', 'sua_senha')
+    # Fazendo login com o email do Outlook
+    server.login('bot_assinaturas@outlook.com', 'omsRkFoZT*!@_oDzjpRp4Qt!fquL9UWvXRc8r_oRrCHVCX2vBa669mjdbdhTTgnu-FTB3Jbsi9uRrRRkx9!*Vdn8GdXHWusL_YZh')
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     from email.mime.base import MIMEBase
     from email import encoders
     msg = MIMEMultipart()
-    msg['From'] = 'seu_email@gmail.com'
+    msg['From'] = 'bot_assinaturas@outlook.com'
     msg['To'] = to_address
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
@@ -57,7 +59,7 @@ def send_email(to_address, subject, body, attachment=None):
         encoders.encode_base64(part)
         part.add_header('Content-Disposition', f'attachment; filename="{attachment}"')
         msg.attach(part)
-    server.sendmail('seu_email@gmail.com', to_address, msg.as_string())
+    server.sendmail('bot_assinaturas@outlook.com', to_address, msg.as_string())
     server.close()
 
 def calculate_price(services, age):
@@ -105,10 +107,9 @@ def generate_pdf(user_data, prices):
     with open(html_file, 'w') as f:
         f.write(html)
 
-    # Usando Selenium para abrir o HTML no navegador
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
     driver.get(f"file:///{html_file}")
-    time.sleep(5)  # Aguardar o carregamento completo (valor ajustável conforme necessário)
+    time.sleep(5)
     driver.quit()
 
     pdf_file = 'nota_debito_' + str(user_data['id']) + '.pdf'

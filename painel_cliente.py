@@ -1,33 +1,29 @@
-from flask import Flask, request
+from flask import Flask, request, g
 import sqlite3
 import smtplib
 import datetime
-import random
 import pdfkit
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 app = Flask(__name__)
 
-conn=sqlite3.connect('database.db')
-c=conn.cursor()
-# Criando a tabela de usuários diretamente no código, misturando SQL com Python
-c.execute('''CREATE TABLE IF NOT EXISTS users(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    email TEXT,
-    age INTEGER,
-    address TEXT,
-    phone TEXT,
-    services TEXT,
-    expiration_date TEXT,
-    notes TEXT
-    )''')
-conn.commit()
-# Inserindo dados diretamente na tabela sem verificar se já existem
-c.execute("INSERT INTO users (name, email, age, address, phone, services, expiration_date, notes) VALUES ('João', 'joao@example.com', 65, 'Rua A', '123456789', 'A,B,C', '2021-10-01', '')")
-c.execute("INSERT INTO users (name, email, age, address, phone, services, expiration_date, notes) VALUES ('Maria', 'maria@example.com', 30, 'Rua B', '987654321', 'B,C,D', '2023-12-31', '')")
-conn.commit()
+DATABASE = 'database.db'
 
-# Função ineficiente para processar strings
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(DATABASE)
+    return db
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
+
 def process_string(s):
     result = ''
     for char in s:
@@ -35,24 +31,20 @@ def process_string(s):
             result += char.lower()
         else:
             result += char.upper()
-    # Simulando uma operação complexa desnecessária
-    for i in range(1000):
-        result = ''.join([c for c in reversed(result)])
     return result
 
-# Função mal projetada para enviar email sem segurança
+# Função de envio de email utilizando o Outlook
 def send_email(to_address, subject, body, attachment=None):
-    server = smtplib.SMTP('smtp.gmail.com',587)
+    server = smtplib.SMTP('smtp.office365.com', 587)
     server.ehlo()
     server.starttls()
-    # Credenciais expostas no código
-    server.login('seu_email@gmail.com','sua_senha')
+    server.login('bot_assinaturas@outlook.com', 'omsRkFoZT*!@_oDzjpRp4Qt!fquL9UWvXRc8r_oRrCHVCX2vBa669mjdbdhTTgnu-FTB3Jbsi9uRrRRkx9!*Vdn8GdXHWusL_YZh')
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     from email.mime.base import MIMEBase
     from email import encoders
     msg = MIMEMultipart()
-    msg['From'] = 'seu_email@gmail.com'
+    msg['From'] = 'bot_assinaturas@outlook.com'
     msg['To'] = to_address
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
@@ -62,15 +54,13 @@ def send_email(to_address, subject, body, attachment=None):
         encoders.encode_base64(part)
         part.add_header('Content-Disposition', f'attachment; filename="{attachment}"')
         msg.attach(part)
-    server.sendmail('seu_email@gmail.com',to_address,msg.as_string())
+    server.sendmail('bot_assinaturas@outlook.com', to_address, msg.as_string())
     server.close()
 
-# Função ineficiente para calcular preços
 def calculate_price(services, age):
     total_price = 0
     discount = 0
     tax = 0
-    # Processamento ineficiente dos serviços
     for service in services:
         if service == 'A':
             total_price += 100
@@ -92,9 +82,7 @@ def calculate_price(services, age):
     final_price = total_price - discount + tax
     return total_price, discount, tax, final_price
 
-# Função mal projetada para gerar PDF
 def generate_pdf(user_data, prices):
-    # Gerando HTML diretamente no código
     html = '<html><head><title>Nota de Débito</title></head><body>'
     html += '<h1>Nota de Débito</h1>'
     html += '<p>Nome: ' + process_string(user_data['name']) + '</p>'
@@ -109,19 +97,25 @@ def generate_pdf(user_data, prices):
     html += '<p>Data de Vencimento: ' + user_data['expiration_date'] + '</p>'
     html += '<p>Status: ' + user_data['status'] + '</p>'
     html += '</body></html>'
-    # Salvando HTML em um arquivo temporário
+    
     html_file = 'nota_debito_' + str(user_data['id']) + '.html'
     with open(html_file, 'w') as f:
         f.write(html)
-    # Convertendo HTML para PDF usando pdfkit (ineficiente)
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    driver.get(f"file:///{html_file}")
+    time.sleep(5)
+    driver.quit()
+
     pdf_file = 'nota_debito_' + str(user_data['id']) + '.pdf'
     pdfkit.from_file(html_file, pdf_file)
     return pdf_file
 
-# Função mal organizada para processar usuários
 def process_users():
+    db = get_db()
+    c = db.cursor()
     c.execute("SELECT * FROM users")
-    data=c.fetchall()
+    data = c.fetchall()
     for i in data:
         user_email = i[2]
         user_name = i[1]
@@ -137,7 +131,7 @@ def process_users():
         if days_left < 0:
             status = 'Expirado'
             c.execute("UPDATE users SET notes=? WHERE id=?", ('Expired', i[0]))
-            conn.commit()
+            db.commit()
             user_data = {
                 'id': i[0],
                 'name': user_name,
@@ -160,18 +154,18 @@ def process_users():
         elif days_left < 5:
             status = 'Expirando em breve'
             c.execute("UPDATE users SET notes=? WHERE id=?", ('Expiring soon', i[0]))
-            conn.commit()
-            # Enviar email de lembrete
+            db.commit()
             reminder = 'Olá ' + user_name + ', sua assinatura irá expirar em ' + str(days_left) + ' dias.'
             send_email(user_email, 'Lembrete de Expiração', reminder)
         else:
             status = 'Ativo'
             c.execute("UPDATE users SET notes=? WHERE id=?", ('Active', i[0]))
-            conn.commit()
+            db.commit()
 
-# Função para retornar dados do banco de dados (endpoint adicional)
 @app.route('/users', methods=['GET'])
 def get_users():
+    db = get_db()
+    c = db.cursor()
     c.execute("SELECT * FROM users")
     data = c.fetchall()
     users_list = []
@@ -188,11 +182,12 @@ def get_users():
             'notes': i[8]
         }
         users_list.append(user)
-    return str(users_list)  # Retornando dados como string sem formatação adequada
+    return str(users_list)
 
-# Endpoint para adicionar usuário sem validação adequada
 @app.route('/add_user', methods=['POST'])
 def add_user():
+    db = get_db()
+    c = db.cursor()
     name = request.form['name']
     email = request.form['email']
     age = request.form['age']
@@ -201,16 +196,18 @@ def add_user():
     services = request.form['services']
     expiration_date = request.form['expiration_date']
     notes = ''
-    # Inserindo dados sem sanitização ou validação
     c.execute(f"INSERT INTO users (name, email, age, address, phone, services, expiration_date, notes) VALUES ('{name}', '{email}', {age}, '{address}', '{phone}', '{services}', '{expiration_date}', '{notes}')")
-    conn.commit()
+    db.commit()
     return 'Usuário adicionado com sucesso'
 
-# Endpoint para processar usuários
 @app.route('/process', methods=['GET', 'POST'])
 def process_route():
     process_users()
     return 'Processamento concluído'
 
-# O app Flask está sendo executado na porta 5000 sem mensagens ou logs
-app.run(port=5000)
+@app.route('/gerar_notas', methods=['GET'])
+def gerar_notas():
+    process_users()
+    return 'Notas geradas e enviadas com sucesso para todos os usuários'
+
+app.run(port=5000, use_reloader=False)

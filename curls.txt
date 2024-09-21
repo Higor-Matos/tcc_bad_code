@@ -1,0 +1,16 @@
+curl -X GET http://127.0.0.1:5000/users
+
+curl -X POST http://127.0.0.1:5000/add_user \
+    -d "name=João" \
+    -d "email=joao@example.com" \
+    -d "age=30" \
+    -d "address=Rua A" \
+    -d "phone=123456789" \
+    -d "services=A,B,C" \
+    -d "expiration_date=2023-12-31"
+
+
+curl -X GET http://127.0.0.1:5000/process
+
+
+curl -X GET http://127.0.0.1:5000/gerar_notas
