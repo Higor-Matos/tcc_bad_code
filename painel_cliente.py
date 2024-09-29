@@ -11,6 +11,12 @@ import time
 app = Flask(__name__)
 
 DATABASE = 'database.db'
+LOG_FILE = 'process_times.txt'
+
+def log_time(message):
+    """Função para salvar o tempo de execução em um arquivo de log."""
+    with open(LOG_FILE, 'a') as f:
+        f.write(message + '\n')
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -35,13 +41,18 @@ def process_string(s):
 
 # Função de envio de email utilizando o Outlook
 def send_email(to_address, subject, body, attachment=None):
+    start_time = time.time()
     print(f"MOCK: Simulando envio de e-mail para {to_address}")
     print(f"Assunto: {subject}")
     print(f"Corpo: {body}")
     if attachment:
         print(f"MOCK: Simulando anexo de arquivo {attachment}")
+    end_time = time.time()
+    time_taken = end_time - start_time
+    log_time(f"Tempo para enviar o e-mail: {time_taken:.4f} segundos")
 
 def calculate_price(services, age):
+    start_time = time.time()
     total_price = 0
     discount = 0
     tax = 0
@@ -64,9 +75,15 @@ def calculate_price(services, age):
         discount += total_price * 0.05
     tax = (total_price - discount) * 0.2
     final_price = total_price - discount + tax
+    end_time = time.time()
+    time_taken = end_time - start_time
+    log_time(f"Tempo para calcular o preço: {time_taken:.4f} segundos")
     return total_price, discount, tax, final_price
 
 def generate_pdf(user_data, prices):
+    start_time = time.time()
+
+    # Gerando o HTML
     html = '<html><head><title>Nota de Débito</title></head><body>'
     html += '<h1>Nota de Débito</h1>'
     html += '<p>Nome: ' + process_string(user_data['name']) + '</p>'
@@ -86,6 +103,8 @@ def generate_pdf(user_data, prices):
     with open(html_file, 'w') as f:
         f.write(html)
 
+    # Gerando o PDF
+    pdf_start_time = time.time()
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
     driver.get(f"file:///{html_file}")
     time.sleep(5)
@@ -93,13 +112,21 @@ def generate_pdf(user_data, prices):
 
     pdf_file = 'nota_debito_' + str(user_data['id']) + '.pdf'
     pdfkit.from_file(html_file, pdf_file)
+    pdf_end_time = time.time()
+
+    total_time = time.time() - start_time
+    log_time(f"Tempo para gerar HTML e PDF: {total_time:.4f} segundos")
+    log_time(f"Tempo específico para gerar PDF: {pdf_end_time - pdf_start_time:.4f} segundos")
+
     return pdf_file
 
 def process_users():
+    start_time = time.time()
     db = get_db()
     c = db.cursor()
     c.execute("SELECT * FROM users")
     data = c.fetchall()
+    
     for i in data:
         user_email = i[2]
         user_name = i[1]
@@ -107,11 +134,15 @@ def process_users():
         user_address = i[4]
         user_phone = i[5]
         user_services = i[6].split(',')
+        
+        # Calcular preço
         total_price, discount, tax, final_price = calculate_price(user_services, user_age)
+        
         expiration_date = datetime.datetime.strptime(i[7], '%Y-%m-%d')
         today = datetime.datetime.now()
         days_left = (expiration_date - today).days
         status = ''
+        
         if days_left < 0:
             status = 'Expirado'
             c.execute("UPDATE users SET notes=? WHERE id=?", ('Expired', i[0]))
@@ -132,6 +163,8 @@ def process_users():
                 'tax': tax,
                 'final_price': final_price
             }
+            
+            # Gerar PDF e enviar email
             pdf_file = generate_pdf(user_data, prices)
             email_body = 'Segue em anexo sua nota de débito.'
             send_email(user_email, 'Sua Nota de Débito', email_body, pdf_file)
@@ -145,6 +178,9 @@ def process_users():
             status = 'Ativo'
             c.execute("UPDATE users SET notes=? WHERE id=?", ('Active', i[0]))
             db.commit()
+
+    end_time = time.time()
+    log_time(f"Tempo total para processar todos os usuários: {end_time - start_time:.4f} segundos")
 
 @app.route('/users', methods=['GET'])
 def get_users():
@@ -188,10 +224,5 @@ def add_user():
 def process_route():
     process_users()
     return 'Processamento concluído'
-
-@app.route('/gerar_notas', methods=['GET'])
-def gerar_notas():
-    process_users()
-    return 'Notas geradas e enviadas com sucesso para todos os usuários'
 
 app.run(port=5000, use_reloader=False)

@@ -5,3 +5,8 @@ selenium
 pytest 
 flask-testing
 werkzeug
+pytest
+pytest-benchmark
+mock
+radon
+bandit

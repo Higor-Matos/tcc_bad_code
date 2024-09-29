@@ -58,3 +58,6 @@ test-output/
 build/
 dist/
 *.egg-info/
+*benchmark_report.json
+*complexity_report.txt
+*security_report.json
