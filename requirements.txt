@@ -4,3 +4,4 @@ webdriver_manager
 selenium
 pytest 
 flask-testing
+werkzeug

@@ -35,27 +35,11 @@ def process_string(s):
 
 # Função de envio de email utilizando o Outlook
 def send_email(to_address, subject, body, attachment=None):
-    server = smtplib.SMTP('smtp.office365.com', 587)
-    server.ehlo()
-    server.starttls()
-    server.login('bot_assinaturas@outlook.com', 'omsRkFoZT*!@_oDzjpRp4Qt!fquL9UWvXRc8r_oRrCHVCX2vBa669mjdbdhTTgnu-FTB3Jbsi9uRrRRkx9!*Vdn8GdXHWusL_YZh')
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    from email.mime.base import MIMEBase
-    from email import encoders
-    msg = MIMEMultipart()
-    msg['From'] = 'bot_assinaturas@outlook.com'
-    msg['To'] = to_address
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+    print(f"MOCK: Simulando envio de e-mail para {to_address}")
+    print(f"Assunto: {subject}")
+    print(f"Corpo: {body}")
     if attachment:
-        part = MIMEBase('application', "octet-stream")
-        part.set_payload(open(attachment, "rb").read())
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', f'attachment; filename="{attachment}"')
-        msg.attach(part)
-    server.sendmail('bot_assinaturas@outlook.com', to_address, msg.as_string())
-    server.close()
+        print(f"MOCK: Simulando anexo de arquivo {attachment}")
 
 def calculate_price(services, age):
     total_price = 0
